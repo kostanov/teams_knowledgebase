@@ -1,8 +1,18 @@
 default:
     @just --list
 
-run:
-    uv run python main.py
+back:
+    uv run uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+
+back-stop:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if pkill -f "uvicorn backend.main:app"; then
+        echo "Backend остановлен"
+    else
+        echo "Backend не запущен"
+        exit 1
+    fi
 
 lint:
     uv run ruff check
