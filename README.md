@@ -28,7 +28,9 @@
   - `kb_questions.jsonl` — 10 вопросов (7 с ответом в базе, 3 вне базы)
 - **Скрипты тестирования** (`tests/`):
   - `seed.py` — очистка БД/Chroma и загрузка документов через API
-  - `test.py` — автоматическая проверка `POST /kb/ask` по вопросам из JSONL
+  - `test.py` — E2E-проверка `POST /kb/ask` по вопросам из JSONL (живой сервер + OpenAI)
+  - `test_*.py` — pytest-тесты API через `TestClient` (без внешних сервисов)
+  - `conftest.py` — фикстуры pytest (БД, клиент, тестовый документ)
 - **Калибровка поиска:** `SIMILARITY_THRESHOLD=0.43` (подобрано по тестовому набору)
 
 ### Ещё не реализовано
@@ -43,6 +45,7 @@
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) — зависимости и виртуальное окружение
 - FastAPI, SQLAlchemy, Chroma, OpenAI API
+- pytest — unit/integration-тесты API
 - ruff — линтинг и форматирование
 
 ## Быстрый старт
@@ -77,7 +80,8 @@ just back-stop
 | `just back-stop` | остановка backend                 |
 | `just clear`     | очистка БД и Chroma               |
 | `just load`      | загрузка документов из JSONL      |
-| `just test`      | автотест API по вопросам          |
+| `just test`      | E2E-тест `POST /kb/ask` по вопросам |
+| `just pytest`    | pytest-тесты API (без OpenAI)     |
 | `just lint`      | проверка кода                     |
 | `just fix`       | автоисправление линтером          |
 | `just format`    | форматирование кода               |
@@ -126,7 +130,7 @@ curl -X POST http://localhost:8000/ai/answer_with_sources \
 | `kb_documents.jsonl` | 5 документов базы знаний |
 | `kb_questions.jsonl` | 10 вопросов с полями `question`, `expected_needs_review`, `why` |
 
-### Сценарий проверки
+### Сценарий E2E-проверки (RAG)
 
 ```bash
 # 1. запустить backend
@@ -137,7 +141,7 @@ just clear
 just load
 # или одной командой через seed: uv run python -m tests.seed --force
 
-# 3. прогнать автотест
+# 3. прогнать E2E-автотест
 just test
 ```
 
@@ -145,7 +149,30 @@ just test
 
 `just test` завершается с кодом `0`, если все 10 вопросов совпали с ожиданием, и с кодом `1` при расхождениях.
 
-### Автотест (`tests/test.py`)
+### Pytest-тесты API (`just pytest`)
+
+Быстрые тесты через `TestClient` — **backend не нужно запускать**, OpenAI и Chroma замоканы или не задействованы. Используется отдельная SQLite-БД во временном каталоге.
+
+```bash
+just pytest
+# или с подробным выводом:
+uv run pytest -v
+```
+
+| Файл | Эндпоинт | Что проверяется |
+|------|----------|-----------------|
+| `test_health.py` | `GET /health` | статус `200`, тело `{"status": "ok"}` |
+| `test_documents_api.py` | `GET /kb/documents` | пустой список, витрина, запись в `audit_runs` |
+| `test_documents_api.py` | `GET /kb/documents/{id}` | карточка документа, `404` если не найден |
+| `test_ai_api.py` | `POST /ai/answer_with_sources` | успешный ответ, `confidence=low` → `needs_review` |
+| `test_ai_api.py` | `POST /ai/answer_with_sources` | невалидный JSON от LLM, недоступность LLM |
+| `test_ai_api.py` | `POST /ai/answer_with_sources` | валидация входа → `422` |
+
+**Не покрыто pytest** (проверяется отдельно): `POST /kb/documents`, `POST /kb/ask` — через `just load` и `just test`.
+
+Всего **11 тестов**.
+
+### E2E-автотест (`tests/test.py`)
 
 Для каждого вопроса из `kb_questions.jsonl` вызывается `POST /kb/ask`. Результаты выводятся в консоль по мере получения ответа:
 
@@ -196,7 +223,7 @@ backend/
 ├── quality/          # аудит и контроль качества
 └── schemas/          # Pydantic-схемы
 docs/                 # ТЗ и технический проект
-tests/                # seed.py, test.py
+tests/                # seed.py, test.py, test_*.py, conftest.py
 tests_data/           # тестовые документы и вопросы
 data/                 # SQLite, Chroma (создаётся при работе)
 ```
