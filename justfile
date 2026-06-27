@@ -32,3 +32,6 @@ load:
 test:
     uv run python -m tests.test
 
+pytest:
+    uv run pytest
+
