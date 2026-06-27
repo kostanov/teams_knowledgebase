@@ -55,12 +55,17 @@ class VectorStore:
         texts: list[str],
         embeddings: list[list[float]],
     ) -> None:
-        self._collection.upsert(
-            ids=snippet_ids,
-            embeddings=embeddings,
-            documents=texts,
-            metadatas=[{"document_id": doc_id} for doc_id in document_ids],
-        )
+        payload = {
+            "ids": snippet_ids,
+            "embeddings": embeddings,
+            "documents": texts,
+            "metadatas": [{"document_id": doc_id} for doc_id in document_ids],
+        }
+        try:
+            self._collection.upsert(**payload)
+        except chromadb.errors.NotFoundError:
+            self._collection = self._get_or_create_collection()
+            self._collection.upsert(**payload)
 
     def delete_snippets(self, snippet_ids: list[str]) -> None:
         if snippet_ids:
@@ -72,11 +77,19 @@ class VectorStore:
         query_embedding: list[float],
         top_k: int,
     ) -> list[SearchResult]:
-        result = self._collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            include=["documents", "metadatas", "distances"],
-        )
+        try:
+            result = self._collection.query(
+                query_embeddings=[query_embedding],
+                n_results=top_k,
+                include=["documents", "metadatas", "distances"],
+            )
+        except chromadb.errors.NotFoundError:
+            self._collection = self._get_or_create_collection()
+            result = self._collection.query(
+                query_embeddings=[query_embedding],
+                n_results=top_k,
+                include=["documents", "metadatas", "distances"],
+            )
         ids = result.get("ids", [[]])[0]
         documents = result.get("documents", [[]])[0]
         metadatas = result.get("metadatas", [[]])[0]

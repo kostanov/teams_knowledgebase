@@ -22,3 +22,13 @@ fix:
 
 format:
     uv run ruff format
+
+clear:
+    uv run python -m tests.seed --clear
+
+load:
+    uv run python -m tests.seed
+
+test:
+    uv run python -m tests.test
+
