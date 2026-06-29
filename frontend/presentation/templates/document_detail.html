@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{% if document %}{{ document.title }}{% else %}Документ{% endif %} — Система знаний{% endblock %}
+{% block content %}
+<style>
+  .document-text-scroll {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .document-text-scroll pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+</style>
+<p><a href="/documents">&larr; К списку документов</a></p>
+
+{% if document %}
+<div class="card shadow-sm">
+  <div class="card-header">
+    <h1 class="h4 mb-0">{{ document.title }}</h1>
+    <small class="text-muted">ID: {{ document.id }} · {{ document.created_at.strftime("%d.%m.%Y %H:%M") }}</small>
+  </div>
+  <div class="card-body p-0">
+    <div class="document-text-scroll p-3">
+      <pre class="mb-0">{{ document.text }}</pre>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Вопрос — История{% endblock %}
+{% block content %}
+<p><a href="/history">&larr; К истории</a></p>
+
+{% if run %}
+<div class="card shadow-sm mb-3">
+  <div class="card-header d-flex justify-content-between">
+    <span>{{ run.created_at.strftime("%d.%m.%Y %H:%M") }}</span>
+    {% if run.needs_review %}
+    <span class="badge text-bg-warning">Требует проверки</span>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    <h1 class="h5">Вопрос</h1>
+    <p>{{ run.question }}</p>
+
+    <h2 class="h5 mt-4">Ответ</h2>
+    <p>{{ run.answer }}</p>
+
+    {% if run.error %}
+    <div class="alert alert-warning mt-3">
+      <strong>Причина ручной проверки:</strong> {{ run.error }}
+    </div>
+    {% endif %}
+
+    {% if run.sources %}
+    <h2 class="h5 mt-4">Источники</h2>
+    {% for source in run.sources %}
+    <div class="quote-block">
+      <blockquote class="mb-1">{{ source.quote }}</blockquote>
+      {% if source.document_id %}
+      <a href="/documents/{{ source.document_id }}">{{ source.document_id }}</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

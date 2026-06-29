@@ -11,9 +11,7 @@ SYSTEM_PROMPT = """Ты — ассистент, который отвечает 
 Если needs_review=false — поле sources должно содержать минимум 1 цитату из контекста.
 Верни ответ строго в формате JSON."""
 
-RETRY_PROMPT_SUFFIX = (
-    "\n\nВАЖНО: верни ТОЛЬКО валидный JSON без markdown и пояснений."
-)
+RETRY_PROMPT_SUFFIX = "\n\nВАЖНО: верни ТОЛЬКО валидный JSON без markdown и пояснений."
 
 ANSWER_JSON_SCHEMA: dict[str, Any] = {
     "type": "object",

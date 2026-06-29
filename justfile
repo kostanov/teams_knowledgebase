@@ -14,6 +14,19 @@ back-stop:
         exit 1
     fi
 
+front:
+    uv run uvicorn frontend.main:app --reload --host 0.0.0.0 --port 8080
+
+front-stop:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if pkill -f "uvicorn frontend.main:app"; then
+        echo "Frontend остановлен"
+    else
+        echo "Frontend не запущен"
+        exit 1
+    fi
+
 lint:
     uv run ruff check
 

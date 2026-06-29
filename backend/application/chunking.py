@@ -23,7 +23,9 @@ def chunk_text(text: str) -> list[str]:
 
 
 def _split_long_paragraph(paragraph: str) -> list[str]:
-    sentences = [part.strip() for part in SENTENCE_SPLIT.split(paragraph) if part.strip()]
+    sentences = [
+        part.strip() for part in SENTENCE_SPLIT.split(paragraph) if part.strip()
+    ]
     if not sentences:
         return [paragraph]
 

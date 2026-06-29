@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Вопросы — Система знаний{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-header">Задать вопрос</div>
+      <div class="card-body">
+        <form method="post" action="/questions">
+          <div class="mb-3">
+            <label class="form-label" for="question">Вопрос</label>
+            <textarea class="form-control" id="question" name="question" rows="4" required>{{ question }}</textarea>
+          </div>
+          <button class="btn btn-primary" type="submit">Спросить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    {% if result %}
+    <div class="card shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Ответ</span>
+        {% if result.needs_review %}
+        <span class="badge text-bg-warning badge-review">Требует проверки</span>
+        {% else %}
+        <span class="badge text-bg-success badge-review">Подтверждён</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <p class="lead">{{ result.answer }}</p>
+
+        {% if result.sources %}
+        <h2 class="h6 mt-4">Источники</h2>
+        {% for source in result.sources %}
+        <div class="quote-block">
+          <blockquote class="mb-1">{{ source.quote }}</blockquote>
+          {% if source.document_id %}
+          <a href="/documents/{{ source.document_id }}">
+            {{ source_titles.get(source.document_id, source.document_id) }}
+          </a>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+    {% elif question and not error %}
+    <div class="alert alert-info">Отправьте вопрос, чтобы получить ответ.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -50,9 +50,7 @@ class QAService:
         )
 
         if not search_results or max_similarity < self._settings.similarity_threshold:
-            reason = (
-                f"Не найдено релевантных фрагментов (max_similarity={max_similarity:.2f})"
-            )
+            reason = f"Не найдено релевантных фрагментов (max_similarity={max_similarity:.2f})"
             output = self._quality.save_ask_result(
                 db,
                 question=payload.question,

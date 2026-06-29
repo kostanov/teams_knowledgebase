@@ -20,6 +20,8 @@
   - `GET /kb/documents/{id}` — карточка документа
   - `POST /kb/ask` — вопрос по базе знаний
   - `POST /ai/answer_with_sources` — ИИ-ответ по переданному контексту
+  - `GET /kb/qa-runs`, `GET /kb/qa-runs/export` — история вопросов и экспорт
+  - `GET /kb/audit-runs` — журнал аудита
   - `GET /health` — проверка состояния
 - **RAG-пайплайн:** чанкинг → индексация в Chroma → поиск top-k → порог схожести → LLM → валидация JSON
 - **Поддержка БД:** SQLite (по умолчанию) и PostgreSQL (`psycopg2-binary`)
@@ -32,12 +34,25 @@
   - `test_*.py` — pytest-тесты API через `TestClient` (без внешних сервисов)
   - `conftest.py` — фикстуры pytest (БД, клиент, тестовый документ)
 - **Калибровка поиска:** `SIMILARITY_THRESHOLD=0.43` (подобрано по тестовому набору)
+- **Frontend** (`frontend/`) — веб-панель на FastAPI + Jinja2 + Bootstrap, модульная архитектура:
+  - **Presentation** — маршруты и шаблоны страниц
+  - **Application** — логика экранов (документы, вопросы, история, аудит)
+  - **API Client** — HTTP-вызовы к backend
+- **Разделы веб-панели:**
+  - **Документы** — список, добавление, карточка с полным текстом
+  - **Вопросы** — запрос к базе знаний, ответ, источники, метка `needs_review`
+  - **История** — последние вопросы, фильтр и поиск, экспорт JSONL/CSV, карточка ответа
+  - **Аудит** — журнал `audit_runs`, фильтры, просмотр input/output
+- **Дополнительные эндпоинты API** (для веб-панели):
+  - `GET /kb/qa-runs` — история вопросов
+  - `GET /kb/qa-runs/{id}` — карточка вопроса
+  - `GET /kb/qa-runs/export` — экспорт истории (JSONL/CSV)
+  - `GET /kb/audit-runs` — журнал аудита
+  - `GET /kb/audit-runs/{id}` — запись аудита
 
 ### Ещё не реализовано
 
-- Frontend (веб-панель: Документы, Вопросы, История, Аудит)
 - Docker / docker-compose
-- Экспорт истории (JSONL/CSV)
 - Миграции БД (Alembic)
 
 ## Стек
@@ -45,6 +60,7 @@
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) — зависимости и виртуальное окружение
 - FastAPI, SQLAlchemy, Chroma, OpenAI API
+- Frontend: FastAPI, Jinja2, Bootstrap 5, httpx
 - pytest — unit/integration-тесты API
 - ruff — линтинг и форматирование
 
@@ -60,15 +76,20 @@ cp .env.example .env
 
 # запуск backend
 just back
+
+# запуск frontend (в отдельном терминале)
+just front
 ```
 
 API: http://localhost:8000  
-Документация: http://localhost:8000/docs
+Документация API: http://localhost:8000/docs  
+Веб-панель: http://localhost:8080
 
-Остановка backend:
+Остановка сервисов:
 
 ```bash
 just back-stop
+just front-stop
 ```
 
 ## Команды just
@@ -78,6 +99,8 @@ just back-stop
 | `just`           | список команд                     |
 | `just back`      | запуск backend                    |
 | `just back-stop` | остановка backend                 |
+| `just front`     | запуск frontend (порт 8080)       |
+| `just front-stop`| остановка frontend                |
 | `just clear`     | очистка БД и Chroma               |
 | `just load`      | загрузка документов из JSONL      |
 | `just test`      | E2E-тест `POST /kb/ask` по вопросам |
@@ -95,7 +118,27 @@ just back-stop
 - `CHROMA_PERSIST_DIRECTORY` — каталог локального Chroma
 - `TOP_K`, `SIMILARITY_THRESHOLD` — параметры поиска (для тестов: `0.43`)
 
+Для frontend дополнительно:
+
+- `BACKEND_API_URL` — адрес backend API (по умолчанию `http://localhost:8000`)
+
 Данные SQLite и Chroma сохраняются в каталоге `data/`.
+
+## Веб-панель
+
+Frontend — отдельный сервис, который обращается к backend по HTTP. Страницы:
+
+| URL | Раздел | Возможности |
+|-----|--------|-------------|
+| `/documents` | Документы | таблица документов, форма добавления, переход в карточку по названию |
+| `/documents/{id}` | Карточка документа | полный текст с прокруткой |
+| `/questions` | Вопросы | поле вопроса, ответ, цитаты-источники, метка «требует проверки» |
+| `/history` | История | последние 100 вопросов, фильтр `needs_review`, поиск, экспорт |
+| `/history/{id}` | Карточка вопроса | ответ, источники, причина ручной проверки |
+| `/audit` | Аудит | журнал действий, фильтры по `action` и `status` |
+| `/audit/{id}` | Запись аудита | input, output, ошибка, длительность |
+
+Экспорт истории доступен на странице «История» (кнопки JSONL/CSV) и через API `GET /kb/qa-runs/export?fmt=jsonl|csv`.
 
 ## Примеры запросов
 
@@ -133,8 +176,9 @@ curl -X POST http://localhost:8000/ai/answer_with_sources \
 ### Сценарий E2E-проверки (RAG)
 
 ```bash
-# 1. запустить backend
+# 1. запустить backend и frontend
 just back
+just front
 
 # 2. (опционально) очистить и загрузить тестовые документы
 just clear
@@ -167,10 +211,15 @@ uv run pytest -v
 | `test_ai_api.py` | `POST /ai/answer_with_sources` | успешный ответ, `confidence=low` → `needs_review` |
 | `test_ai_api.py` | `POST /ai/answer_with_sources` | невалидный JSON от LLM, недоступность LLM |
 | `test_ai_api.py` | `POST /ai/answer_with_sources` | валидация входа → `422` |
+| `test_history_api.py` | `GET /kb/qa-runs` | пустой список, выдача, фильтр `needs_review`, поиск, запись в `audit_runs` |
+| `test_history_api.py` | `GET /kb/qa-runs/{id}` | карточка вопроса, `404` если не найден |
+| `test_history_api.py` | `GET /kb/qa-runs/export` | экспорт JSONL и CSV |
+| `test_audit_runs_api.py` | `GET /kb/audit-runs` | пустой список, выдача, фильтры `action`/`status`, запись в `audit_runs` |
+| `test_audit_runs_api.py` | `GET /kb/audit-runs/{id}` | запись аудита, `404` если не найдена |
 
 **Не покрыто pytest** (проверяется отдельно): `POST /kb/documents`, `POST /kb/ask` — через `just load` и `just test`.
 
-Всего **11 тестов**.
+Всего **27 тестов**.
 
 ### E2E-автотест (`tests/test.py`)
 
@@ -222,6 +271,14 @@ backend/
 ├── llm/              # OpenAI
 ├── quality/          # аудит и контроль качества
 └── schemas/          # Pydantic-схемы
+frontend/
+├── api/              # HTTP-клиент к backend
+├── application/      # логика экранов
+├── presentation/
+│   ├── routes/       # маршруты веб-панели
+│   └── templates/    # Jinja2-шаблоны (Bootstrap)
+├── config.py
+└── main.py
 docs/                 # ТЗ и технический проект
 tests/                # seed.py, test.py, test_*.py, conftest.py
 tests_data/           # тестовые документы и вопросы

@@ -34,9 +34,7 @@ class AuditService:
 
 class QualityService:
     INSUFFICIENT_DATA_ANSWER = "Данных недостаточно"
-    LLM_UNAVAILABLE_ANSWER = (
-        "Сервис LLM временно недоступен, требуется ручная проверка"
-    )
+    LLM_UNAVAILABLE_ANSWER = "Сервис LLM временно недоступен, требуется ручная проверка"
 
     def enforce_ask_response(
         self,

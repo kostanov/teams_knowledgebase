@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Аудит — Система знаний{% endblock %}
+{% block content %}
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <form class="row g-2 align-items-end" method="get" action="/audit">
+      <div class="col-md-4">
+        <label class="form-label" for="action">Действие</label>
+        <select class="form-select" id="action" name="action">
+          <option value="">Все</option>
+          {% for item in actions %}
+          <option value="{{ item }}"{% if action == item %} selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="status">Статус</label>
+        <select class="form-select" id="status" name="status">
+          <option value=""{% if not status %} selected{% endif %}>Все</option>
+          <option value="success"{% if status == 'success' %} selected{% endif %}>success</option>
+          <option value="error"{% if status == 'error' %} selected{% endif %}>error</option>
+        </select>
+      </div>
+      <div class="col-md-5 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Применить</button>
+        <a class="btn btn-outline-secondary" href="/audit">Сбросить</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Действие</th>
+          <th>Статус</th>
+          <th>Длительность</th>
+          <th>Ошибка</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td class="text-nowrap">{{ run.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
+          <td><code>{{ run.action }}</code></td>
+          <td>
+            {% if run.status == 'success' %}
+            <span class="badge text-bg-success">{{ run.status }}</span>
+            {% else %}
+            <span class="badge text-bg-danger">{{ run.status }}</span>
+            {% endif %}
+          </td>
+          <td>{{ run.duration_ms }} мс</td>
+          <td class="small text-muted">{{ run.error or '—' }}</td>
+          <td><a class="btn btn-sm btn-outline-primary" href="/audit/{{ run.id }}">Открыть</a></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-muted text-center py-4">Записей аудита нет</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Запись аудита{% endblock %}
+{% block content %}
+<p><a href="/audit">&larr; К аудиту</a></p>
+
+{% if run %}
+<div class="card shadow-sm">
+  <div class="card-header">
+    <code>{{ run.action }}</code>
+    · {{ run.created_at.strftime("%d.%m.%Y %H:%M:%S") }}
+    · {{ run.duration_ms }} мс
+    ·
+    {% if run.status == 'success' %}
+    <span class="badge text-bg-success">{{ run.status }}</span>
+    {% else %}
+    <span class="badge text-bg-danger">{{ run.status }}</span>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    {% if run.error %}
+    <div class="alert alert-warning">
+      <strong>Ошибка:</strong> {{ run.error }}
+    </div>
+    {% endif %}
+
+    <h2 class="h6">Input</h2>
+    <pre class="json-block">{{ run.input }}</pre>
+
+    <h2 class="h6 mt-3">Output</h2>
+    <pre class="json-block">{{ run.output }}</pre>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

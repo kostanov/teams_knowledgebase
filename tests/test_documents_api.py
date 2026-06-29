@@ -23,7 +23,9 @@ def test_list_documents_returns_items(client, sample_document: Document) -> None
     assert "text" not in payload[0]
 
 
-def test_list_documents_writes_audit(client, db: Session, sample_document: Document) -> None:
+def test_list_documents_writes_audit(
+    client, db: Session, sample_document: Document
+) -> None:
     response = client.get("/kb/documents")
 
     assert response.status_code == 200
